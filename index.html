@@ -10,7 +10,7 @@
       height: 100%;
       overflow: hidden;
       background: #ddd;
-      touch-action: none; /* prevent page scroll on touch */
+      touch-action: none;
     }
     canvas {
       display: block;
@@ -26,14 +26,13 @@
       background: rgba(0,0,0,.4);
       color: #fff;
       text-align: center;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      font-family: system-ui, Arial, sans-serif;
     }
     #overlay .box {
       background: rgba(0,0,0,.5);
       padding: 16px 22px;
       border-radius: 12px;
       font-weight: 800;
-      letter-spacing: .3px;
     }
     #overlay .sub { font-weight: 600; opacity: .9; margin-top: 6px; }
   </style>
@@ -44,7 +43,7 @@
   <div id="overlay">
     <div class="box">
       <div style="font-size:42px; margin-bottom:6px;">Game Over</div>
-      <div class="sub">Tap / Click / Press Space to restart</div>
+      <div class="sub">Tap / Click / Space to restart</div>
     </div>
   </div>
 
@@ -53,49 +52,36 @@
     const ctx = cvs.getContext("2d");
     const overlay = document.getElementById("overlay");
 
-    // ----- Fullscreen canvas with HiDPI scaling -----
     function resize() {
       const dpr = Math.max(1, window.devicePixelRatio || 1);
       cvs.width = Math.floor(window.innerWidth * dpr);
       cvs.height = Math.floor(window.innerHeight * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      // Reset bird to center whenever resizing
+      // bird starts at center
       bird.x = cvs.width / (2 * dpr) - bird.w / 2;
       bird.y = cvs.height / (2 * dpr) - bird.h / 2;
     }
     window.addEventListener("resize", resize);
 
-    // ----- Game settings -----
-    const GRAVITY = 0.6;
-    const JUMP = -12;
-    const PIPE_W = 70;
-    const GAP = 220;
-    const PIPE_SPEED = 3;
-    const HIT_PAD = 10;
-
+    const GRAVITY = 0.6, JUMP = -12, PIPE_W = 70, GAP = 220, PIPE_SPEED = 3, HIT_PAD = 10;
     const PIPE_FILL = "rgba(0,0,0,0.75)";
     const PIPE_OUT  = "rgba(255,255,255,0.08)";
 
     const birdImg = new Image();
     birdImg.src = "i.png";
-
-    // Bird will be positioned in resize()
     const bird = { x: 0, y: 0, w: 90, h: 90, vy: 0 };
 
     let pipes = [];
     let score = 0;
     let gameOver = false;
-    let frame = 0;
 
-    // ----- Helpers -----
     function hitbox(b) {
       return { x: b.x + HIT_PAD, y: b.y + HIT_PAD, w: b.w - HIT_PAD*2, h: b.h - HIT_PAD*2 };
     }
 
     function spawnPipe() {
-      const minTop = 40;
-      const maxTop = cvs.height - GAP - 140;
+      const minTop = 40, maxTop = cvs.height - GAP - 140;
       const top = Math.max(minTop, Math.min(maxTop, Math.random() * (maxTop - minTop) + minTop));
       pipes.push({ x: cvs.width, top, bottom: top + GAP, passed: false });
     }
@@ -112,8 +98,7 @@
       ctx.moveTo(x, height);
       ctx.quadraticCurveTo(x + PIPE_W/2, height + capH, x + PIPE_W, height);
       ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
+      ctx.fill(); ctx.stroke();
     }
 
     function drawBottomPipe(x, y) {
@@ -129,8 +114,7 @@
       ctx.moveTo(x, y);
       ctx.quadraticCurveTo(x + PIPE_W/2, y - capH, x + PIPE_W, y);
       ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
+      ctx.fill(); ctx.stroke();
     }
 
     function drawPipes() {
@@ -147,21 +131,16 @@
     function drawScore() {
       ctx.fillStyle = "#000";
       ctx.font = "32px Arial Black";
-      ctx.textBaseline = "top";
-      ctx.fillText("Score: " + score, 20, 20);
+      ctx.fillText("Score: " + score, 20, 40);
     }
 
-    // ----- Game loop -----
     function update() {
       bird.vy += GRAVITY;
       bird.y += bird.vy;
 
       if (bird.y + bird.h > cvs.height || bird.y < 0) endGame();
 
-      if (pipes.length === 0 || pipes[pipes.length - 1].x < cvs.width - 300) {
-        spawnPipe();
-      }
-
+      if (pipes.length === 0 || pipes[pipes.length - 1].x < cvs.width - 300) spawnPipe();
       for (const p of pipes) p.x -= PIPE_SPEED;
 
       const hb = hitbox(bird);
@@ -172,10 +151,7 @@
         if (overlapX && (hitTop || hitBot)) endGame();
       }
 
-      for (const p of pipes) {
-        if (!p.passed && p.x + PIPE_W < hb.x) { p.passed = true; score++; }
-      }
-
+      for (const p of pipes) if (!p.passed && p.x + PIPE_W < hb.x) { p.passed = true; score++; }
       pipes = pipes.filter(p => p.x + PIPE_W > 0);
     }
 
@@ -188,46 +164,20 @@
 
     function loop() {
       if (gameOver) return;
-      update();
-      draw();
-      frame++;
+      update(); draw();
       requestAnimationFrame(loop);
     }
 
-    function endGame() {
-      gameOver = true;
-      overlay.style.display = "grid";
-    }
-
+    function endGame() { gameOver = true; overlay.style.display = "grid"; }
     function resetGame() {
-      bird.vy = 0;
-      pipes = [];
-      score = 0;
-      frame = 0;
-      gameOver = false;
-      overlay.style.display = "none";
-      resize(); // recenter bird
-      loop();
+      bird.vy = 0; pipes = []; score = 0; gameOver = false;
+      overlay.style.display = "none"; resize(); loop();
     }
 
-    // ----- Controls -----
-    cvs.addEventListener("click", () => {
-      if (gameOver) resetGame();
-      else bird.vy = JUMP;
-    });
-    cvs.addEventListener("touchstart", e => {
-      e.preventDefault();
-      if (gameOver) resetGame();
-      else bird.vy = JUMP;
-    }, { passive: false });
-    window.addEventListener("keydown", e => {
-      if (e.code === "Space") {
-        if (gameOver) resetGame();
-        else bird.vy = JUMP;
-      }
-    });
+    cvs.addEventListener("click", () => gameOver ? resetGame() : bird.vy = JUMP);
+    cvs.addEventListener("touchstart", e => { e.preventDefault(); gameOver ? resetGame() : bird.vy = JUMP; }, { passive: false });
+    window.addEventListener("keydown", e => { if (e.code === "Space") gameOver ? resetGame() : bird.vy = JUMP; });
 
-    // Start game after bird image loads
     birdImg.onload = () => { resize(); loop(); };
   </script>
 </body>
