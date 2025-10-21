@@ -93,9 +93,11 @@
     }
 
     function drawScore() {
-      ctx.fillStyle = "#000"; // black
+      ctx.save();
+      ctx.fillStyle = "#000"; // force black
       ctx.font = "32px Arial Black";
       ctx.fillText("Score: " + score, 20, 50);
+      ctx.restore();
     }
 
     function hitbox(b) {
