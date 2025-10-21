@@ -2,89 +2,54 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Gensyn-Flappy</title>
   <style>
-    html, body {
+    body {
       margin: 0;
-      height: 100%;
       overflow: hidden;
-      background: #ddd;
-      touch-action: none;
     }
     canvas {
       display: block;
-      width: 100vw;
-      height: 100vh;
       background: url("t.png") center/cover no-repeat;
     }
-    #overlay {
-      position: fixed;
-      inset: 0;
-      display: none;
-      place-items: center;
-      background: rgba(0,0,0,.4);
-      color: #fff;
-      text-align: center;
-      font-family: system-ui, Arial, sans-serif;
-    }
-    #overlay .box {
-      background: rgba(0,0,0,.5);
-      padding: 16px 22px;
-      border-radius: 12px;
-      font-weight: 800;
-    }
-    #overlay .sub { font-weight: 600; opacity: .9; margin-top: 6px; }
   </style>
 </head>
 <body>
   <canvas id="gameCanvas"></canvas>
 
-  <div id="overlay">
-    <div class="box">
-      <div style="font-size:42px; margin-bottom:6px;">Game Over</div>
-      <div class="sub">Tap / Click / Space to restart</div>
-    </div>
-  </div>
-
   <script>
-    const cvs = document.getElementById("gameCanvas");
-    const ctx = cvs.getContext("2d");
-    const overlay = document.getElementById("overlay");
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
 
-    function resize() {
-      const dpr = Math.max(1, window.devicePixelRatio || 1);
-      cvs.width = Math.floor(window.innerWidth * dpr);
-      cvs.height = Math.floor(window.innerHeight * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-      // Center the bird
-      bird.x = cvs.width / (2 * dpr) - bird.w / 2;
-      bird.y = cvs.height / (2 * dpr) - bird.h / 2;
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
     }
-    window.addEventListener("resize", resize);
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
 
-    const GRAVITY = 0.6, JUMP = -12, PIPE_W = 70, GAP = 220, PIPE_SPEED = 3, HIT_PAD = 10;
-    const PIPE_FILL = "rgba(0,0,0,0.75)";
-    const PIPE_OUT  = "rgba(255,255,255,0.1)";
-    const CAP_H = 18; // rounded cap height
+    // --- Settings ---
+    const GRAVITY  = 0.5;
+    const JUMP     = -10;
+    const PIPE_W   = 80;
+    const PIPE_GAP = 250;
+    const CAP_H    = 20;
+    const HIT_PAD  = 12;
+
+    const PIPE_FILL = "#2e2e2e";
+    const PIPE_OUT  = "#555";
 
     const birdImg = new Image();
     birdImg.src = "i.png";
-    const bird = { x: 0, y: 0, w: 90, h: 90, vy: 0 };
 
+    let bird = { x: 120, y: 200, w: 100, h: 100, dy: 0 };
     let pipes = [];
     let score = 0;
     let gameOver = false;
 
-    function hitbox(b) {
-      return { x: b.x + HIT_PAD, y: b.y + HIT_PAD, w: b.w - HIT_PAD*2, h: b.h - HIT_PAD*2 };
-    }
-
-    function spawnPipe() {
-      const minTop = 40, maxTop = cvs.height - GAP - 140;
-      const top = Math.max(minTop, Math.min(maxTop, Math.random() * (maxTop - minTop) + minTop));
-      pipes.push({ x: cvs.width, top, bottom: top + GAP, passed: false });
+    function drawBird() {
+      ctx.drawImage(birdImg, bird.x, bird.y, bird.w, bird.h);
     }
 
     function drawTopPipe(x, height) {
@@ -92,33 +57,29 @@
       ctx.strokeStyle = PIPE_OUT;
       ctx.lineWidth = 2;
 
-      // body
       ctx.fillRect(x, 0, PIPE_W, height);
       ctx.strokeRect(x, 0, PIPE_W, height);
 
-      // rounded bottom
       ctx.beginPath();
       ctx.moveTo(x, height);
-      ctx.quadraticCurveTo(x + PIPE_W/2, height + CAP_H, x + PIPE_W, height);
+      ctx.quadraticCurveTo(x + PIPE_W / 2, height + CAP_H, x + PIPE_W, height);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
     }
 
     function drawBottomPipe(x, y) {
-      const h = cvs.height - y;
+      const h = canvas.height - y;
       ctx.fillStyle = PIPE_FILL;
       ctx.strokeStyle = PIPE_OUT;
       ctx.lineWidth = 2;
 
-      // body
       ctx.fillRect(x, y, PIPE_W, h);
       ctx.strokeRect(x, y, PIPE_W, h);
 
-      // rounded top
       ctx.beginPath();
       ctx.moveTo(x, y);
-      ctx.quadraticCurveTo(x + PIPE_W/2, y - CAP_H, x + PIPE_W, y);
+      ctx.quadraticCurveTo(x + PIPE_W / 2, y - CAP_H, x + PIPE_W, y);
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
@@ -131,61 +92,88 @@
       }
     }
 
-    function drawBird() {
-      ctx.drawImage(birdImg, bird.x, bird.y, bird.w, bird.h);
+    function drawScore() {
+      ctx.fillStyle = "#fff";
+      ctx.font = "32px Arial Black";
+      ctx.fillText("Score: " + score, 20, 50);
     }
 
-    function drawScore() {
-      ctx.fillStyle = "#000";
-      ctx.font = "32px Arial Black";
-      ctx.fillText("Score: " + score, 20, 40);
+    function hitbox(b) {
+      return {
+        x: b.x + HIT_PAD,
+        y: b.y + HIT_PAD,
+        w: b.w - HIT_PAD * 2,
+        h: b.h - HIT_PAD * 2
+      };
+    }
+
+    function spawnPipe() {
+      const top = Math.random() * (canvas.height - PIPE_GAP - 150) + 50;
+      pipes.push({ x: canvas.width, top, bottom: top + PIPE_GAP, passed: false });
     }
 
     function update() {
-      bird.vy += GRAVITY;
-      bird.y += bird.vy;
+      bird.dy += GRAVITY;
+      bird.y  += bird.dy;
 
-      if (bird.y + bird.h > cvs.height || bird.y < 0) endGame();
+      if (pipes.length === 0 || pipes[pipes.length - 1].x < canvas.width - 300) {
+        spawnPipe();
+      }
 
-      if (pipes.length === 0 || pipes[pipes.length - 1].x < cvs.width - 300) spawnPipe();
-      for (const p of pipes) p.x -= PIPE_SPEED;
+      for (const p of pipes) p.x -= 3;
 
       const hb = hitbox(bird);
       for (const p of pipes) {
         const overlapX = hb.x < p.x + PIPE_W && hb.x + hb.w > p.x;
-        const hitTop = hb.y < p.top;
-        const hitBot = hb.y + hb.h > p.bottom;
-        if (overlapX && (hitTop || hitBot)) endGame();
+        const hitTop   = hb.y < p.top;
+        const hitBot   = hb.y + hb.h > p.bottom;
+        if (overlapX && (hitTop || hitBot)) { gameOver = true; break; }
       }
 
-      for (const p of pipes) if (!p.passed && p.x + PIPE_W < hb.x) { p.passed = true; score++; }
+      for (const p of pipes) {
+        if (!p.passed && p.x + PIPE_W < hb.x) { p.passed = true; score++; }
+      }
+
       pipes = pipes.filter(p => p.x + PIPE_W > 0);
+
+      if (hb.y < 0 || hb.y + hb.h > canvas.height) gameOver = true;
     }
 
     function draw() {
-      ctx.clearRect(0, 0, cvs.width, cvs.height);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
       drawBird();
       drawPipes();
       drawScore();
+
+      if (gameOver) {
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#fff";
+        ctx.font = "48px Arial Black";
+        ctx.fillText("Game Over", canvas.width / 2 - 140, canvas.height / 2);
+        ctx.font = "28px Arial";
+        ctx.fillText("Click to restart", canvas.width / 2 - 110, canvas.height / 2 + 50);
+      }
     }
 
     function loop() {
-      if (gameOver) return;
-      update(); draw();
-      requestAnimationFrame(loop);
+      update();
+      draw();
+      if (!gameOver) requestAnimationFrame(loop);
     }
 
-    function endGame() { gameOver = true; overlay.style.display = "grid"; }
+    canvas.addEventListener("click", () => {
+      if (gameOver) resetGame();
+      else bird.dy = JUMP;
+    });
+
     function resetGame() {
-      bird.vy = 0; pipes = []; score = 0; gameOver = false;
-      overlay.style.display = "none"; resize(); loop();
+      bird.y = 200; bird.dy = 0;
+      pipes = []; score = 0; gameOver = false;
+      loop();
     }
 
-    cvs.addEventListener("click", () => gameOver ? resetGame() : bird.vy = JUMP);
-    cvs.addEventListener("touchstart", e => { e.preventDefault(); gameOver ? resetGame() : bird.vy = JUMP; }, { passive: false });
-    window.addEventListener("keydown", e => { if (e.code === "Space") gameOver ? resetGame() : bird.vy = JUMP; });
-
-    birdImg.onload = () => { resize(); loop(); };
+    birdImg.onload = () => loop();
   </script>
 </body>
 </html>
