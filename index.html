@@ -58,7 +58,7 @@
       cvs.height = Math.floor(window.innerHeight * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      // bird starts at center
+      // Center the bird
       bird.x = cvs.width / (2 * dpr) - bird.w / 2;
       bird.y = cvs.height / (2 * dpr) - bird.h / 2;
     }
@@ -66,7 +66,8 @@
 
     const GRAVITY = 0.6, JUMP = -12, PIPE_W = 70, GAP = 220, PIPE_SPEED = 3, HIT_PAD = 10;
     const PIPE_FILL = "rgba(0,0,0,0.75)";
-    const PIPE_OUT  = "rgba(255,255,255,0.08)";
+    const PIPE_OUT  = "rgba(255,255,255,0.1)";
+    const CAP_H = 18; // rounded cap height
 
     const birdImg = new Image();
     birdImg.src = "i.png";
@@ -90,15 +91,18 @@
       ctx.fillStyle = PIPE_FILL;
       ctx.strokeStyle = PIPE_OUT;
       ctx.lineWidth = 2;
+
+      // body
       ctx.fillRect(x, 0, PIPE_W, height);
       ctx.strokeRect(x, 0, PIPE_W, height);
 
-      const capH = 18;
+      // rounded bottom
       ctx.beginPath();
       ctx.moveTo(x, height);
-      ctx.quadraticCurveTo(x + PIPE_W/2, height + capH, x + PIPE_W, height);
+      ctx.quadraticCurveTo(x + PIPE_W/2, height + CAP_H, x + PIPE_W, height);
       ctx.closePath();
-      ctx.fill(); ctx.stroke();
+      ctx.fill();
+      ctx.stroke();
     }
 
     function drawBottomPipe(x, y) {
@@ -106,15 +110,18 @@
       ctx.fillStyle = PIPE_FILL;
       ctx.strokeStyle = PIPE_OUT;
       ctx.lineWidth = 2;
+
+      // body
       ctx.fillRect(x, y, PIPE_W, h);
       ctx.strokeRect(x, y, PIPE_W, h);
 
-      const capH = 18;
+      // rounded top
       ctx.beginPath();
       ctx.moveTo(x, y);
-      ctx.quadraticCurveTo(x + PIPE_W/2, y - capH, x + PIPE_W, y);
+      ctx.quadraticCurveTo(x + PIPE_W/2, y - CAP_H, x + PIPE_W, y);
       ctx.closePath();
-      ctx.fill(); ctx.stroke();
+      ctx.fill();
+      ctx.stroke();
     }
 
     function drawPipes() {
